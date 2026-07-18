@@ -1,4 +1,4 @@
-package com.toyota.connectedcars.notification.api;
+package com.toyota.connectedcars.notification.controller;
 
 import com.toyota.connectedcars.notification.domain.Alert;
 import com.toyota.connectedcars.notification.service.AlertService;

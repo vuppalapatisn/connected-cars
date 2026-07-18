@@ -72,6 +72,20 @@ docker-compose up --build
 curl http://localhost:8080/actuator/health
 ```
 
+### API documentation (Swagger UI)
+
+Every service exposes interactive OpenAPI docs at `/swagger-ui.html`:
+
+| Service | Swagger UI |
+|---|---|
+| API Gateway (aggregates all specs) | http://localhost:8080/swagger-ui.html |
+| auth-service | http://localhost:8081/swagger-ui.html |
+| vehicle-telemetry-service | http://localhost:8082/swagger-ui.html |
+| notification-service | http://localhost:8083/swagger-ui.html |
+| fleet-management-service | http://localhost:8084/swagger-ui.html |
+
+The gateway's Swagger UI has a dropdown to switch between every service's spec.
+
 ## Deploy to Kubernetes with Istio
 
 ```bash

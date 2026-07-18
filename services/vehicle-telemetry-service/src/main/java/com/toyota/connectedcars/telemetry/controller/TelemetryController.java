@@ -1,4 +1,4 @@
-package com.toyota.connectedcars.telemetry.api;
+package com.toyota.connectedcars.telemetry.controller;
 
 import com.toyota.connectedcars.common.dto.TelemetryMessage;
 import com.toyota.connectedcars.telemetry.domain.TelemetryEvent;

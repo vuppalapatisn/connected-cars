@@ -1,4 +1,4 @@
-package com.toyota.connectedcars.fleet.api;
+package com.toyota.connectedcars.fleet.controller;
 
 import com.toyota.connectedcars.fleet.domain.Vehicle;
 import com.toyota.connectedcars.fleet.domain.VehicleRepository;

@@ -1,7 +1,7 @@
 package com.toyota.connectedcars.auth.service;
 
-import com.toyota.connectedcars.auth.api.AuthController.IntrospectResponse;
-import com.toyota.connectedcars.auth.api.AuthController.TokenResponse;
+import com.toyota.connectedcars.auth.controller.AuthController.IntrospectResponse;
+import com.toyota.connectedcars.auth.controller.AuthController.TokenResponse;
 import com.toyota.connectedcars.auth.domain.AppUser;
 import com.toyota.connectedcars.auth.domain.AppUserRepository;
 import com.toyota.connectedcars.common.security.JwtService;

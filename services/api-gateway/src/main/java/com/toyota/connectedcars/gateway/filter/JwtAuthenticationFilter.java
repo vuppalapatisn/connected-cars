@@ -84,7 +84,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private boolean isPublic(String path) {
         return PUBLIC_PATHS.stream().anyMatch(path::startsWith)
                 || path.startsWith("/swagger-ui")
-                || path.startsWith("/v3/api-docs");
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/aggregate/")   // proxied per-service OpenAPI specs
+                || path.startsWith("/webjars/");     // swagger-ui static resources
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String reason) {

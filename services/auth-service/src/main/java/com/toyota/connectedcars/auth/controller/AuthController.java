@@ -1,4 +1,4 @@
-package com.toyota.connectedcars.auth.api;
+package com.toyota.connectedcars.auth.controller;
 
 import com.toyota.connectedcars.auth.service.AuthService;
 import jakarta.validation.Valid;

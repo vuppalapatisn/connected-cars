@@ -26,9 +26,50 @@ spring:
           predicates:
             - Path=/api/v1/notifications/**
 
+        # --- OpenAPI aggregation: proxy each service's /v3/api-docs through the gateway ---
+        - id: auth-docs
+          uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/aggregate/auth/v3/api-docs
+          filters:
+            - RewritePath=/aggregate/auth/v3/api-docs, /v3/api-docs
+        - id: telemetry-docs
+          uri: ${TELEMETRY_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/aggregate/telemetry/v3/api-docs
+          filters:
+            - RewritePath=/aggregate/telemetry/v3/api-docs, /v3/api-docs
+        - id: fleet-docs
+          uri: ${FLEET_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/aggregate/fleet/v3/api-docs
+          filters:
+            - RewritePath=/aggregate/fleet/v3/api-docs, /v3/api-docs
+        - id: notification-docs
+          uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/aggregate/notification/v3/api-docs
+          filters:
+            - RewritePath=/aggregate/notification/v3/api-docs, /v3/api-docs
+
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-change-me-please-32bytes-min}
   issuer: ${JWT_ISSUER:https://auth.connected-cars.toyota.com}
+
+# One Swagger UI at the gateway (http://localhost:8080/swagger-ui.html) with a
+# dropdown to switch between each service's spec, proxied via the routes above.
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: auth-service
+        url: /aggregate/auth/v3/api-docs
+      - name: vehicle-telemetry-service
+        url: /aggregate/telemetry/v3/api-docs
+      - name: fleet-management-service
+        url: /aggregate/fleet/v3/api-docs
+      - name: notification-service
+        url: /aggregate/notification/v3/api-docs
 
 management:
   endpoints:
