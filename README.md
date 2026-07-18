@@ -111,7 +111,11 @@ terraform apply -var-file=environments/dev.tfvars
 | [istio-service-mesh-guide.md](docs/interview-prep/istio-service-mesh-guide.md) | Service-to-service comms, mTLS, traffic management |
 | [kubernetes-authorization-guide.md](docs/interview-prep/kubernetes-authorization-guide.md) | RBAC, AuthN/AuthZ, mesh authorization |
 | [deloitte-mock-interview-qa.md](docs/interview-prep/deloitte-mock-interview-qa.md) | 40+ mock Q&A with model answers |
+| [architecture-walkthrough-script.md](docs/interview-prep/architecture-walkthrough-script.md) | Word-for-word 5-minute spoken walkthrough |
 | [resources-and-links.md](docs/interview-prep/resources-and-links.md) | Curated official docs, courses, whitepapers |
+| [Connected-Cars-Architecture.pptx](docs/Connected-Cars-Architecture.pptx) | 13-slide architecture deck for the interview |
+
+Run the full mesh locally on your laptop with kind: see [`k8s/local/README.md`](k8s/local/README.md) (`bash scripts/kind-up.sh`).
 
 ---
 

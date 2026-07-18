@@ -1,0 +1,31 @@
+# IstioOperator config for a kind cluster. kind has no cloud LoadBalancer, so we
+# expose the ingress gateway as a NodePort on the ports mapped in kind-cluster.yaml.
+#   istioctl install -f k8s/local/istio-kind-install.yaml -y
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: connected-cars-istio
+spec:
+  profile: demo
+  components:
+    ingressGateways:
+      - name: istio-ingressgateway
+        enabled: true
+        k8s:
+          service:
+            type: NodePort
+            ports:
+              - name: http2
+                port: 80
+                targetPort: 8080
+                nodePort: 30080
+              - name: https
+                port: 443
+                targetPort: 8443
+                nodePort: 30443
+  values:
+    global:
+      proxy:
+        # Smaller sidecar footprint for laptops.
+        resources:
+          requests: { cpu: "10m", memory: "64Mi" }

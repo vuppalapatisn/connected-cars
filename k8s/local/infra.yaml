@@ -1,0 +1,84 @@
+# In-cluster infrastructure for LOCAL kind runs only. In AWS these are replaced by
+# RDS, MSK, and ElastiCache. Single replicas, ephemeral storage — do NOT use in prod.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: postgres, namespace: connected-cars }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: postgres } }
+  template:
+    metadata:
+      labels: { app: postgres }
+      annotations: { sidecar.istio.io/inject: "false" }   # keep datastores out of the mesh
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - { name: POSTGRES_USER, value: connectedcars }
+            - { name: POSTGRES_PASSWORD, value: connectedcars }
+            - { name: POSTGRES_DB, value: connectedcars }
+          ports: [{ containerPort: 5432 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: postgres, namespace: connected-cars }
+spec:
+  selector: { app: postgres }
+  ports: [{ name: tcp-postgres, port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: redis, namespace: connected-cars }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: redis } }
+  template:
+    metadata:
+      labels: { app: redis }
+      annotations: { sidecar.istio.io/inject: "false" }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          ports: [{ containerPort: 6379 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: redis, namespace: connected-cars }
+spec:
+  selector: { app: redis }
+  ports: [{ name: tcp-redis, port: 6379, targetPort: 6379 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: kafka, namespace: connected-cars }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: kafka } }
+  template:
+    metadata:
+      labels: { app: kafka }
+      annotations: { sidecar.istio.io/inject: "false" }
+    spec:
+      containers:
+        - name: kafka
+          image: bitnami/kafka:3.7
+          ports: [{ containerPort: 9092 }]
+          env:
+            - { name: KAFKA_CFG_NODE_ID, value: "0" }
+            - { name: KAFKA_CFG_PROCESS_ROLES, value: "controller,broker" }
+            - { name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS, value: "0@localhost:9093" }
+            - { name: KAFKA_CFG_LISTENERS, value: "PLAINTEXT://:9092,CONTROLLER://:9093" }
+            - { name: KAFKA_CFG_ADVERTISED_LISTENERS, value: "PLAINTEXT://kafka.connected-cars.svc.cluster.local:9092" }
+            - { name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP, value: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT" }
+            - { name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES, value: "CONTROLLER" }
+            - { name: ALLOW_PLAINTEXT_LISTENER, value: "yes" }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: kafka, namespace: connected-cars }
+spec:
+  selector: { app: kafka }
+  ports: [{ name: tcp-kafka, port: 9092, targetPort: 9092 }]

@@ -1,0 +1,98 @@
+# Self-consistent Istio config for the LOCAL kind demo. Unlike the production
+# manifests in k8s/istio/, this version:
+#   * uses an HTTP gateway (no TLS cert needed on a laptop)
+#   * enforces STRICT mTLS + zero-trust service-identity authorization (the headline)
+#   * OMITS RequestAuthentication/JWKS and canary subsets, which need RS256/JWKS and
+#     a v2 deployment (documented in k8s/README.md and the interview guides).
+# The api-gateway still validates the end-user JWT at the application layer (HS256).
+---
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: connected-cars-gateway-local
+  namespace: connected-cars
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+    - port: { number: 80, name: http, protocol: HTTP }
+      hosts: ["*"]
+---
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: connected-cars-routes-local
+  namespace: connected-cars
+spec:
+  hosts: ["*"]
+  gateways: ["connected-cars-gateway-local"]
+  http:
+    - match: [{ uri: { prefix: /api/ } }]
+      route:
+        - destination:
+            host: api-gateway.connected-cars.svc.cluster.local
+            port: { number: 8080 }
+      retries: { attempts: 3, perTryTimeout: 2s, retryOn: gateway-error,connect-failure }
+      timeout: 10s
+    - match: [{ uri: { prefix: /actuator/ } }]
+      route:
+        - destination:
+            host: api-gateway.connected-cars.svc.cluster.local
+            port: { number: 8080 }
+---
+# STRICT mutual TLS for all service-to-service traffic in the namespace.
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: connected-cars-strict
+  namespace: connected-cars
+spec:
+  mtls: { mode: STRICT }
+---
+# Client-side: use Istio mTLS when calling in-mesh services (no subsets locally).
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: mesh-mtls-local
+  namespace: connected-cars
+spec:
+  host: "*.connected-cars.svc.cluster.local"
+  trafficPolicy:
+    tls: { mode: ISTIO_MUTUAL }
+---
+# Zero-trust authorization: default-deny, then allow only intended callers by identity.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny-all
+  namespace: connected-cars
+spec: {}
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-apigw
+  namespace: connected-cars
+spec:
+  selector: { matchLabels: { app: api-gateway } }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-apigw-to-backends
+  namespace: connected-cars
+spec:
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/connected-cars/sa/api-gateway"]
+      to:
+        - operation:
+            methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+  # Applies to all workloads in the namespace that have no more-specific policy.

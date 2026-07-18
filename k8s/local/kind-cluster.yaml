@@ -1,0 +1,27 @@
+# kind (Kubernetes IN Docker) cluster for running the FULL Istio stack locally.
+#
+#   kind create cluster --name connected-cars --config k8s/local/kind-cluster.yaml
+#
+# extraPortMappings expose the Istio ingress gateway NodePorts (30080/30443) on
+# localhost so you can hit https://localhost from your laptop. One control-plane +
+# two workers gives enough room for the sidecars + infra pods.
+apiVersion: kind.x-k8s.io/v1alpha4
+kind: Cluster
+name: connected-cars
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 30080   # Istio ingressgateway HTTP NodePort
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 30443   # Istio ingressgateway HTTPS NodePort
+        hostPort: 443
+        protocol: TCP
+  - role: worker
+  - role: worker

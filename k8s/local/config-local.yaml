@@ -1,0 +1,23 @@
+# LOCAL overrides for the platform-config / platform-secrets used by the Deployments.
+# Points services at the in-cluster infra (infra.yaml) instead of AWS managed services.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: connected-cars
+data:
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka.connected-cars.svc.cluster.local:9092"
+  SPRING_DATA_REDIS_HOST: "redis.connected-cars.svc.cluster.local"
+  JWT_ISSUER: "https://auth.connected-cars.toyota.com"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: platform-secrets
+  namespace: connected-cars
+type: Opaque
+stringData:
+  JWT_SECRET: "local-dev-secret-change-me-please-32bytes-min"
+  DB_USERNAME: "connectedcars"
+  DB_PASSWORD: "connectedcars"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres.connected-cars.svc.cluster.local:5432/connectedcars"
