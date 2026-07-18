@@ -1,0 +1,139 @@
+# ============================================================================
+# AuthorizationPolicy — the ACCESS CONTROL layer of the mesh. Envoy evaluates
+# these on the SERVER side of every connection. Evaluation order per request:
+#   1. CUSTOM  (e.g. ext-authz)      2. DENY policies    3. ALLOW policies
+# If any ALLOW policy exists for a workload, the request must match one, otherwise
+# it is denied (default-deny for that workload). No policy at all = allow.
+#
+# We combine two dimensions:
+#   * source.principals  -> WHICH SERVICE (mTLS SPIFFE identity from the ServiceAccount)
+#   * request JWT claims  -> WHICH END-USER / ROLE
+# ============================================================================
+---
+# 0) Namespace-wide default DENY. Nothing talks to anything until explicitly allowed.
+#    This is the single most important policy for a zero-trust posture.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: default-deny-all
+  namespace: connected-cars
+spec:
+  {}   # empty spec + no rules = deny all requests in this namespace
+---
+# 1) Allow the Istio ingress gateway to reach the api-gateway.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-ingress-to-apigw
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels: { app: api-gateway }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/istio-system/sa/istio-ingressgateway-service-account"
+      to:
+        - operation:
+            methods: ["GET", "POST", "PUT", "PATCH", "DELETE"]
+---
+# 2) auth-service: reachable by the api-gateway ONLY, and only the auth paths.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-apigw-to-auth
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels: { app: auth-service }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/connected-cars/sa/api-gateway"
+      to:
+        - operation:
+            paths: ["/api/v1/auth/*"]
+            methods: ["POST"]
+---
+# 3) telemetry-service: writable by the api-gateway (vehicle uploads). Readable by
+#    the api-gateway too. Notification consumes via Kafka, not HTTP, so it is NOT here.
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-apigw-to-telemetry
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels: { app: vehicle-telemetry-service }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - "cluster.local/ns/connected-cars/sa/api-gateway"
+      to:
+        - operation:
+            paths: ["/api/v1/telemetry*", "/api/v1/telemetry/*"]
+            methods: ["GET", "POST"]
+---
+# 4) fleet-management-service: combines SERVICE identity AND END-USER ROLE.
+#    Only the api-gateway may call it, AND only end-users whose JWT carries the
+#    ROLE_FLEET_ADMIN role may perform write operations. Read is allowed for any
+#    authenticated user (requestPrincipals '*' = a valid JWT was presented).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: fleet-rbac
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels: { app: fleet-management-service }
+  action: ALLOW
+  rules:
+    # 4a. Writes require the fleet-admin role claim.
+    - from:
+        - source:
+            principals: ["cluster.local/ns/connected-cars/sa/api-gateway"]
+            requestPrincipals: ["*"]        # a validated JWT must be present
+      to:
+        - operation:
+            methods: ["POST", "PUT", "PATCH", "DELETE"]
+      when:
+        - key: request.auth.claims[roles]
+          values: ["ROLE_FLEET_ADMIN"]
+    # 4b. Reads allowed for any authenticated caller from the gateway.
+    - from:
+        - source:
+            principals: ["cluster.local/ns/connected-cars/sa/api-gateway"]
+            requestPrincipals: ["*"]
+      to:
+        - operation:
+            methods: ["GET"]
+---
+# 5) Explicit DENY example: block the notification-service from ever being reached
+#    over HTTP from anything except health probes (it is event-driven via Kafka).
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: notification-http-lockdown
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels: { app: notification-service }
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals: ["cluster.local/ns/connected-cars/sa/api-gateway"]
+      to:
+        - operation:
+            methods: ["GET"]
+            paths: ["/api/v1/notifications/*"]
+    # Allow Istio/Kubelet health checks (no principal) on actuator only.
+    - to:
+        - operation:
+            paths: ["/actuator/health*"]

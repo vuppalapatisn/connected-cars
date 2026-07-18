@@ -1,0 +1,49 @@
+# NetworkPolicy — L3/L4 firewall between pods (enforced by the CNI, e.g. Calico or
+# the VPC CNI with network-policy enabled). Complements Istio's L7 AuthorizationPolicy:
+# even if the mesh is bypassed, the network itself denies unexpected connections.
+---
+# Default deny all ingress in the namespace. Nothing can receive traffic until an
+# explicit policy allows it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: connected-cars
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress"]
+---
+# Allow the api-gateway to receive traffic from the Istio ingress gateway namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingress-to-apigw
+  namespace: connected-cars
+spec:
+  podSelector:
+    matchLabels: { app: api-gateway }
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels: { kubernetes.io/metadata.name: istio-system }
+      ports:
+        - port: 8080
+---
+# Allow backend services to receive traffic only from the api-gateway pods.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-apigw-to-backends
+  namespace: connected-cars
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: ["auth-service", "vehicle-telemetry-service", "fleet-management-service", "notification-service"]
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels: { app: api-gateway }

@@ -1,0 +1,10 @@
+# Namespace for the platform. The istio-injection label tells Istio to inject
+# the Envoy sidecar into every pod created here — this is what makes mesh
+# features (mTLS, telemetry, authorization) work without app changes.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: connected-cars
+  labels:
+    istio-injection: enabled
+    app.kubernetes.io/part-of: connected-cars

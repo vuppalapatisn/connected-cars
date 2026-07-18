@@ -1,0 +1,61 @@
+# ============================================================================
+# DestinationRule — client-side policy applied AFTER routing:
+#   * tls.mode ISTIO_MUTUAL  -> use Istio-managed certs when calling this host
+#   * subsets                -> named pools (by pod labels) for canary/blue-green
+#   * trafficPolicy          -> connection pools, outlier detection (circuit break)
+# ============================================================================
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: telemetry-destination
+  namespace: connected-cars
+spec:
+  host: vehicle-telemetry-service.connected-cars.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL          # present client cert for mTLS
+    connectionPool:
+      tcp:
+        maxConnections: 100
+      http:
+        http2MaxRequests: 1000
+        maxRequestsPerConnection: 10
+    outlierDetection:             # eject unhealthy endpoints = circuit breaking
+      consecutive5xxErrors: 5
+      interval: 10s
+      baseEjectionTime: 30s
+      maxEjectionPercent: 50
+  subsets:
+    - name: v1
+      labels: { version: v1 }
+    - name: v2
+      labels: { version: v2 }
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: auth-destination
+  namespace: connected-cars
+spec:
+  host: auth-service.connected-cars.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels: { version: v1 }
+---
+apiVersion: networking.istio.io/v1
+kind: DestinationRule
+metadata:
+  name: fleet-destination
+  namespace: connected-cars
+spec:
+  host: fleet-management-service.connected-cars.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+  subsets:
+    - name: v1
+      labels: { version: v1 }

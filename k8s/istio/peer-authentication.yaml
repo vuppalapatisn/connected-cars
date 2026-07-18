@@ -1,0 +1,46 @@
+# ============================================================================
+# PeerAuthentication — controls SERVICE-TO-SERVICE (workload) mTLS.
+# This is TRANSPORT authentication: "is the CALLING workload who it claims to be?"
+# Istio's control plane (istiod) issues short-lived X.509 SPIFFE certs to every
+# sidecar and rotates them automatically. STRICT means a sidecar will ONLY accept
+# mutually-authenticated TLS connections — plaintext is rejected.
+# ============================================================================
+---
+# 1) Mesh-wide default: enforce STRICT mTLS everywhere.
+#    Must live in the Istio root namespace (istio-system) and be named "default".
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  mtls:
+    mode: STRICT
+---
+# 2) Namespace-scoped reinforcement for connected-cars (explicit > implicit).
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: connected-cars-strict
+  namespace: connected-cars
+spec:
+  mtls:
+    mode: STRICT
+---
+# 3) Port-level exception example: the telemetry pod also exposes /actuator on 8082
+#    scraped by Prometheus. If the scraper is OUTSIDE the mesh you can permit it on
+#    a specific port with PERMISSIVE. (Prefer keeping Prometheus in-mesh instead.)
+apiVersion: security.istio.io/v1
+kind: PeerAuthentication
+metadata:
+  name: telemetry-metrics-permissive
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels:
+      app: vehicle-telemetry-service
+  mtls:
+    mode: STRICT
+  portLevelMtls:
+    8082:
+      mode: STRICT   # keep STRICT; shown here to illustrate per-port override syntax

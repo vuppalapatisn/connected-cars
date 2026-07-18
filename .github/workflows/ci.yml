@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build & test
+        run: mvn -B clean verify
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/*.xml'
+
+  image-scan:
+    needs: build-test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [api-gateway, auth-service, vehicle-telemetry-service, notification-service, fleet-management-service]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -f services/${{ matrix.service }}/Dockerfile -t local/${{ matrix.service }}:ci .
+
+      - name: Trivy vulnerability scan
+        uses: aquasecurity/trivy-action@0.24.0
+        with:
+          image-ref: local/${{ matrix.service }}:ci
+          severity: HIGH,CRITICAL
+          exit-code: '0'   # set to '1' to fail the build on findings

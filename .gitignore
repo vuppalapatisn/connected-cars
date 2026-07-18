@@ -1,0 +1,45 @@
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### IntelliJ / Eclipse ###
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+bin/
+
+### VS Code ###
+.vscode/
+
+### OS ###
+.DS_Store
+Thumbs.db
+
+### Logs ###
+*.log
+logs/
+
+### Terraform ###
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars.local
+crash.log
+override.tf
+override.tf.json
+
+### Secrets / env ###
+.env
+*.pem
+*.key
+secrets.yaml
+
+### Build ###
+*.jar
+!.mvn/wrapper/*.jar
+!maven-wrapper.jar

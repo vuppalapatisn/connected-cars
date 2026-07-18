@@ -1,0 +1,27 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: fleet-management-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:fleet;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:connectedcars}
+    password: ${DB_PASSWORD:connectedcars}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

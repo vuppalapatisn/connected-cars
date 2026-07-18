@@ -1,0 +1,25 @@
+# Non-secret configuration shared by services.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: platform-config
+  namespace: connected-cars
+data:
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "b-1.msk.connected-cars.amazonaws.com:9092"
+  SPRING_DATA_REDIS_HOST: "connected-cars.abc123.ng.0001.use1.cache.amazonaws.com"
+  JWT_ISSUER: "https://auth.connected-cars.toyota.com"
+---
+# Placeholder Secret. In production do NOT commit secrets — use the External Secrets
+# Operator to sync from AWS Secrets Manager, or CSI Secrets Store. Values below are
+# base64 of "changeme"-class placeholders for local/kind clusters only.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: platform-secrets
+  namespace: connected-cars
+type: Opaque
+stringData:
+  JWT_SECRET: "REPLACE_ME_WITH_A_32_BYTE_RANDOM_SECRET_FROM_SECRETS_MANAGER"
+  DB_USERNAME: "connectedcars"
+  DB_PASSWORD: "REPLACE_ME"
+  SPRING_DATASOURCE_URL: "jdbc:postgresql://connected-cars.rds.amazonaws.com:5432/connectedcars"

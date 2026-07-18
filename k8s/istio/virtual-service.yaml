@@ -1,0 +1,47 @@
+# ============================================================================
+# VirtualService — L7 routing rules. Binds the Gateway host to internal services,
+# and demonstrates retries, timeouts, and a canary (90/10) traffic split.
+# ============================================================================
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: connected-cars-routes
+  namespace: connected-cars
+spec:
+  hosts:
+    - "api.connected-cars.toyota.com"
+  gateways:
+    - connected-cars-gateway
+  http:
+    # All external API traffic enters through the api-gateway service.
+    - match:
+        - uri: { prefix: /api/ }
+      route:
+        - destination:
+            host: api-gateway.connected-cars.svc.cluster.local
+            port: { number: 8080 }
+      retries:
+        attempts: 3
+        perTryTimeout: 2s
+        retryOn: gateway-error,connect-failure,refused-stream
+      timeout: 10s
+---
+# Internal mesh routing for the telemetry service, with a canary split to v2.
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: telemetry-internal
+  namespace: connected-cars
+spec:
+  hosts:
+    - vehicle-telemetry-service.connected-cars.svc.cluster.local
+  http:
+    - route:
+        - destination:
+            host: vehicle-telemetry-service.connected-cars.svc.cluster.local
+            subset: v1
+          weight: 90
+        - destination:
+            host: vehicle-telemetry-service.connected-cars.svc.cluster.local
+            subset: v2
+          weight: 10

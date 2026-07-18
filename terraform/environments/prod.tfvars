@@ -1,0 +1,9 @@
+region             = "us-east-1"
+environment        = "prod"
+cluster_name       = "connected-cars"
+kubernetes_version = "1.30"
+node_instance_types = ["m6g.xlarge"]
+node_desired_size  = 4
+node_max_size      = 20
+db_instance_class  = "db.r6g.large"
+# db_password provided via environment: export TF_VAR_db_password=...

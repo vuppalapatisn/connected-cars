@@ -1,0 +1,9 @@
+**/target/
+**/*.iml
+.idea/
+.git/
+.github/
+terraform/
+docs/
+*.md
+!README.md

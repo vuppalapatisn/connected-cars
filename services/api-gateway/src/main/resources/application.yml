@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials
+      routes:
+        - id: auth-service
+          uri: ${AUTH_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/api/v1/auth/**
+        - id: telemetry-service
+          uri: ${TELEMETRY_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/api/v1/telemetry/**
+        - id: fleet-service
+          uri: ${FLEET_SERVICE_URI:http://localhost:8084}
+          predicates:
+            - Path=/api/v1/fleet/**
+        - id: notification-service
+          uri: ${NOTIFICATION_SERVICE_URI:http://localhost:8083}
+          predicates:
+            - Path=/api/v1/notifications/**
+
+jwt:
+  secret: ${JWT_SECRET:local-dev-secret-change-me-please-32bytes-min}
+  issuer: ${JWT_ISSUER:https://auth.connected-cars.toyota.com}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics,gateway
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}

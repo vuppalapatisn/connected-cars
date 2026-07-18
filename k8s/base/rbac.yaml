@@ -1,0 +1,76 @@
+# Kubernetes RBAC — controls what identities may do against the KUBERNETES API
+# (distinct from Istio AuthorizationPolicy, which controls service-to-service data-plane
+# traffic). Principle of least privilege: each SA gets only what it needs.
+#
+# RBAC objects:
+#   Role / ClusterRole            -> a set of permissions (verbs on resources)
+#   RoleBinding / ClusterRoleBinding -> grants a Role to a subject (user/group/SA)
+---
+# The telemetry service reads its own ConfigMaps/Secrets only (namespaced).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: config-reader
+  namespace: connected-cars
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: telemetry-config-reader
+  namespace: connected-cars
+subjects:
+  - kind: ServiceAccount
+    name: vehicle-telemetry-service
+    namespace: connected-cars
+roleRef:
+  kind: Role
+  name: config-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: auth-config-reader
+  namespace: connected-cars
+subjects:
+  - kind: ServiceAccount
+    name: auth-service
+    namespace: connected-cars
+roleRef:
+  kind: Role
+  name: config-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Example: a read-only "fleet-operator" human role for the dashboard/on-call team.
+# Bind real users/groups (from OIDC/IAM) to this — never give humans cluster-admin.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fleet-operator-readonly
+  namespace: connected-cars
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "endpoints"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["apps"]
+    resources: ["deployments", "replicasets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fleet-operators
+  namespace: connected-cars
+subjects:
+  # This group name comes from your OIDC provider (e.g. EKS + IAM/Cognito/Okta).
+  - kind: Group
+    name: connected-cars-operators
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: fleet-operator-readonly
+  apiGroup: rbac.authorization.k8s.io

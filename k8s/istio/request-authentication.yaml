@@ -1,0 +1,47 @@
+# ============================================================================
+# RequestAuthentication — END-USER (request) authentication via JWT.
+# This is distinct from PeerAuthentication (workload mTLS):
+#   PeerAuthentication  -> "which SERVICE is calling?"      (transport/mTLS)
+#   RequestAuthentication -> "which END-USER made the request?" (JWT in Authorization header)
+#
+# It ONLY validates a token IF one is present (signature, issuer, audience, expiry
+# against the JWKS). It does NOT reject requests without a token — that is the job
+# of a companion AuthorizationPolicy (see authorization-policy.yaml). This split is
+# intentional and a very common interview gotcha.
+# ============================================================================
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-at-ingress
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels:
+      app: api-gateway            # validate end-user JWTs as they enter via the gateway
+  jwtRules:
+    - issuer: "https://auth.connected-cars.toyota.com"
+      # In production point this at the auth-service JWKS (RS256). For the HS256 dev
+      # setup you would instead validate at the app layer; RS256 + JWKS is recommended.
+      jwksUri: "http://auth-service.connected-cars.svc.cluster.local:8081/.well-known/jwks.json"
+      audiences:
+        - "connected-cars-api"
+      forwardOriginalToken: true  # pass the JWT to upstream services for claim-based authz
+      outputPayloadToHeader: "X-Jwt-Payload"
+---
+# Also validate JWTs on sensitive internal services (defense-in-depth) so a
+# compromised gateway cannot forge end-user identity to the fleet service.
+apiVersion: security.istio.io/v1
+kind: RequestAuthentication
+metadata:
+  name: jwt-fleet
+  namespace: connected-cars
+spec:
+  selector:
+    matchLabels:
+      app: fleet-management-service
+  jwtRules:
+    - issuer: "https://auth.connected-cars.toyota.com"
+      jwksUri: "http://auth-service.connected-cars.svc.cluster.local:8081/.well-known/jwks.json"
+      audiences:
+        - "connected-cars-api"
+      forwardOriginalToken: true

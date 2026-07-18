@@ -1,0 +1,16 @@
+# Istio Telemetry API — turn on distributed tracing (100% sample in non-prod;
+# lower in prod) and access logging for the namespace. Traces export to Jaeger.
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-telemetry
+  namespace: connected-cars
+spec:
+  tracing:
+    - randomSamplingPercentage: 100.0
+  accessLogging:
+    - providers:
+        - name: envoy
+  metrics:
+    - providers:
+        - name: prometheus

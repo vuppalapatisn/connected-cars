@@ -1,0 +1,30 @@
+# ============================================================================
+# Istio Gateway — configures the edge load balancer (istio-ingressgateway) that
+# accepts north-south traffic from outside the mesh. Behind an AWS ALB/NLB.
+# ============================================================================
+apiVersion: networking.istio.io/v1
+kind: Gateway
+metadata:
+  name: connected-cars-gateway
+  namespace: connected-cars
+spec:
+  selector:
+    istio: ingressgateway          # use Istio's default ingress deployment
+  servers:
+    - port:
+        number: 443
+        name: https
+        protocol: HTTPS
+      tls:
+        mode: SIMPLE               # TLS termination at the gateway
+        credentialName: connected-cars-tls   # K8s TLS secret (cert-manager/ACM)
+      hosts:
+        - "api.connected-cars.toyota.com"
+    - port:
+        number: 80
+        name: http
+        protocol: HTTP
+      hosts:
+        - "api.connected-cars.toyota.com"
+      tls:
+        httpsRedirect: true        # force HTTP -> HTTPS
