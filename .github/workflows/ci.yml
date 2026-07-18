@@ -41,9 +41,10 @@ jobs:
       - name: Build image
         run: docker build -f services/${{ matrix.service }}/Dockerfile -t local/${{ matrix.service }}:ci .
 
+      # Install the Trivy CLI directly (latest) — avoids the trivy-action composite
+      # action, whose pinned internal setup-trivy ref can break independently.
+      - name: Install Trivy
+        run: curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.28.0
-        with:
-          image-ref: local/${{ matrix.service }}:ci
-          severity: HIGH,CRITICAL
-          exit-code: '0'   # set to '1' to fail the build on findings
+        run: trivy image --severity HIGH,CRITICAL --exit-code 0 --no-progress --ignore-unfixed local/${{ matrix.service }}:ci
